@@ -1,0 +1,5 @@
+python-pptx>=1.0.2
+pillow>=10.0
+lxml>=5.0
+# pdftoppm（poppler）が無い環境では PDF→PNG に使う
+# pymupdf>=1.24

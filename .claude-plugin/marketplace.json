@@ -1,0 +1,12 @@
+{
+  "name": "design-studio",
+  "owner": { "name": "Riku Maeda" },
+  "metadata": { "description": "ローカル版デザイン生成（パワポ優先）のプラグイン配布元" },
+  "plugins": [
+    {
+      "name": "ai-design-kit",
+      "source": "./ai-design-kit",
+      "description": "deck-lab（パワポ）/ design-lab（UI）/ design-handoff（実装）と共通の design-reviewer"
+    }
+  ]
+}

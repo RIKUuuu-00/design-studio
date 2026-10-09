@@ -1,0 +1,91 @@
+{
+  "title": "営業日報のデジタル化 提案",
+  "template": "../slides/template.pptx",
+  "page_numbers": true,
+  "footer": "Sample Corp / 社外秘",
+  "slides": [
+    {
+      "layout": "Title Slide",
+      "fill": {
+        "title": "営業日報のデジタル化による商談化率の向上",
+        "subtitle": "2026年10月 営業企画部"
+      }
+    },
+    {
+      "layout": "Title and Content",
+      "fill": {
+        "title": "結論：日報入力を5分以内にし、商談化率を3pt上げる",
+        "body": [
+          "**現状**：日報の入力に平均25分かかり、提出率は62%",
+          ["記入項目が多く、自由記述が中心", "上長のフィードバックが週1回に留まる"],
+          "**打ち手**：音声入力と定型項目化で入力を5分以内にする",
+          "**効果**：提出率90%以上、商談化率を18%→21%へ"
+        ]
+      },
+      "notes": "結論先行。数字は2026年上期の実績。"
+    },
+    {
+      "layout": "Title and Content",
+      "fill": {
+        "title": "入力時間の内訳：自由記述が全体の6割を占める",
+        "body": {
+          "chart": {
+            "type": "bar",
+            "categories": ["自由記述", "顧客情報の転記", "次回アクション", "その他"],
+            "series": [{ "name": "入力時間（分）", "values": [15, 5, 3, 2] }],
+            "number_format": "0\"分\""
+          }
+        }
+      }
+    },
+    {
+      "layout": "Title Only",
+      "fill": { "title": "3つの打ち手を段階的に導入する" },
+      "add": [
+        {
+          "type": "grid",
+          "box": [5, 25, 90, 30],
+          "cols": 3,
+          "items": [
+            { "type": "shape", "shape": "chevron", "fill": "accent1", "text": "Step 1\n定型項目化", "bold": true, "size": 16 },
+            { "type": "shape", "shape": "chevron", "fill": "accent1@0.25", "text": "Step 2\n音声入力", "bold": true, "size": 16 },
+            { "type": "shape", "shape": "chevron", "fill": "accent1@0.5", "text": "Step 3\nAI要約", "bold": true, "size": 16 }
+          ]
+        },
+        {
+          "type": "grid",
+          "box": [5, 60, 90, 28],
+          "cols": 3,
+          "items": [
+            { "type": "text", "text": ["項目を12→6に削減", "選択式を基本にする"], "size": 14 },
+            { "type": "text", "text": ["移動中にスマホで入力", "文字起こしは自動"], "size": 14 },
+            { "type": "text", "text": ["要点と次アクションを自動抽出", "上長へ即日共有"], "size": 14 }
+          ]
+        }
+      ]
+    },
+    {
+      "layout": "Two Content",
+      "fill": {
+        "title": "導入費用は初年度で回収できる",
+        "body": {
+          "table": {
+            "columns": ["項目", "初年度", "2年目以降"],
+            "rows": [
+              ["ライセンス", "480万円", "480万円"],
+              ["導入支援", "300万円", "-"],
+              ["**合計**", "**780万円**", "**480万円**"]
+            ],
+            "col_widths": [2, 1.2, 1.2],
+            "align": ["left", "right", "right"],
+            "font_size": 14
+          }
+        },
+        "body2": [
+          "商談化率+3ptで粗利 年1,200万円増",
+          "回収期間は約8か月"
+        ]
+      }
+    }
+  ]
+}

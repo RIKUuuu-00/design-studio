@@ -1,0 +1,30 @@
+name: e2e
+on:
+  push:
+    paths: ["ai-design-kit/**", "tests/**", ".github/workflows/e2e.yml"]
+  pull_request:
+    paths: ["ai-design-kit/**", "tests/**", ".github/workflows/e2e.yml"]
+jobs:
+  e2e:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: System packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libreoffice-impress poppler-utils fonts-ipafont-gothic
+      - name: Python packages
+        run: pip install -r ai-design-kit/scripts/requirements.txt
+      - name: Playwright
+        run: |
+          npm install -g playwright@1.56.1
+          npx -y playwright@1.56.1 install --with-deps chromium
+      - name: Run e2e
+        run: bash tests/run_e2e.sh "$RUNNER_TEMP/e2e"
