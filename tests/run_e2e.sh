@@ -38,10 +38,10 @@ sed 's#"template": "../slides/template.pptx"#"template": "design-system/slides/t
 from pptx import Presentation
 from pptx.enum.shapes import PP_PLACEHOLDER
 prs = Presentation("decks/sample/deck.pptx")
-assert len(prs.slides) == 5, len(prs.slides)
+assert len(prs.slides) == 6, len(prs.slides)
 s3 = prs.slides[2]
 assert any(getattr(sh, "has_chart", False) and sh.has_chart for sh in s3.shapes), "スライド3にネイティブのグラフが無い"
-s5 = prs.slides[4]
+s5 = prs.slides[5]
 assert any(getattr(sh, "has_table", False) and sh.has_table for sh in s5.shapes), "スライド5にネイティブの表が無い"
 for i, s in enumerate(prs.slides, 1):
     for sh in s.placeholders:
@@ -68,12 +68,53 @@ grep -q leftover_text tmpl-check.json || fail "見本文の消し忘れを検出
 
 step "画像化"
 bash "$kit/scripts/render-pptx.sh" decks/sample/deck.pptx decks/sample/renders --sheet
-[ "$(ls decks/sample/renders/slide-*.png | wc -l)" -eq 5 ] || fail "スライド画像が 5 枚でない"
+[ "$(ls decks/sample/renders/slide-*.png | wc -l)" -eq 6 ] || fail "スライド画像が 6 枚でない"
 test -s decks/sample/deck.pdf || fail "PDF が無い"
 
 step "PDF 入力（代替運用）"
 "$py" "$kit/scripts/render_pptx.py" decks/sample/deck.pdf --out decks/sample/renders-pdf >/dev/null
-[ "$(ls decks/sample/renders-pdf/slide-*.png | wc -l)" -eq 5 ] || fail "PDF からの画像化に失敗"
+[ "$(ls decks/sample/renders-pdf/slide-*.png | wc -l)" -eq 6 ] || fail "PDF からの画像化に失敗"
+
+step "文字組（禁則・最終行の検出）"
+"$py" - "$kit/scripts" <<'EOF'
+import sys
+sys.path.insert(0, sys.argv[1])
+from lib.textfit import Measurer, wrap
+m = Measurer("sans-serif")
+lines = wrap("入力時間を半分以下にできる。", 6, m)
+assert not any(l and l[0] in "、。" for l in lines), f"行頭に句読点: {lines}"
+assert wrap("CRM連携", 2.5, m)[0] == "CRM", wrap("CRM連携", 2.5, m)
+print("禁則: OK")
+EOF
+grep -q '"widow"' decks/sample/check.json || fail "最終行 1 文字（る）を検出できていない"
+
+step "デザインモード（テーマ生成 → 全パターン）"
+mkdir -p decks/showcase design-mode
+"$py" "$kit/scripts/make_theme.py" "$repo/tests/fixtures/theme-harbor.json" --out design-mode/template.pptx | tee theme.log
+if grep -q '^\[配色\]' theme.log; then fail "既定テーマで配色の警告が出た"; fi
+"$py" "$kit/scripts/register_template.py" design-mode/template.pptx --no-render >/dev/null
+grep -q "タイトルのみ" design-mode/layouts.md || fail "生成テンプレのレイアウトがカタログに無い"
+sed 's#"template": "template.pptx"#"template": "design-mode/template.pptx"#' "$repo/tests/fixtures/showcase-deck.json" > decks/showcase/deck.json
+"$py" "$kit/scripts/build_deck.py" decks/showcase/deck.json --out decks/showcase/deck.pptx --report decks/showcase/build.json
+"$py" "$kit/scripts/check_deck.py" decks/showcase/deck.pptx --json decks/showcase/check.json
+"$py" - <<'EOF'
+import json
+items = json.load(open("decks/showcase/check.json"))
+bad = [i for i in items if i["severity"] in ("error", "warn")]
+assert not bad, "showcase に指摘が残っている: " + json.dumps(bad, ensure_ascii=False)
+print("showcase: 指摘 0")
+EOF
+"$py" "$kit/scripts/render_pptx.py" decks/showcase/deck.pptx --out decks/showcase/renders --sheet >/dev/null
+[ "$(ls decks/showcase/renders/slide-*.png | wc -l)" -eq 12 ] || fail "showcase の画像が 12 枚でない"
+"$py" - <<'EOF'
+import re, zipfile
+z = zipfile.ZipFile("decks/showcase/deck.pptx")
+for n in z.namelist():
+    if re.match(r"ppt/slides/slide\d+\.xml$", n):
+        ids = re.findall(r'<p:cNvPr id="(\d+)"', z.read(n).decode())
+        assert len(ids) == len(set(ids)), f"{n} に重複した図形 ID がある"
+print("showcase の図形 ID: OK")
+EOF
 
 step "骨子比較キャンバス"
 cat > decks/sample/canvas.json <<'EOF'

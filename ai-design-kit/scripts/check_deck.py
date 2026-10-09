@@ -6,7 +6,8 @@
 検出するもの:
 - placeholder_empty  … 空のまま残ったプレースホルダー（編集画面で「クリックして…」が出る）
 - leftover_text      … 見本文・入力促し文の消し忘れ（Lorem ipsum、〇〇、ここに入力 など）
-- overflow_risk      … 文字量が枠に収まらない見込み（全角=1em の概算。--margin で余裕率を指定）
+- overflow_risk      … 文字量が枠に収まらない見込み（実フォントの字幅と禁則で計算。--margin で余裕率を指定）
+- widow              … 段落の最終行が 1〜2 文字だけになる（「る」だけの行など）
 - out_of_bounds      … スライド外へのはみ出し
 - overlap            … 文字を持つ図形同士の重なり
 - small_font         … --min-font 未満の文字
@@ -27,7 +28,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from lib.pptx_common import (  # noqa: E402
     NS,
-    estimate_text_height,
     intersection_area,
     leftover_hits,
     missing_theme_fonts,
@@ -36,6 +36,7 @@ from lib.pptx_common import (  # noqa: E402
     shape_box,
     theme_info,
 )
+from lib.textfit import measure_shape  # noqa: E402
 
 SEVERITY = {
     "placeholder_empty": "error",
@@ -48,6 +49,7 @@ SEVERITY = {
     "color_off_theme": "info",
     "font_missing": "warn",
     "tight_fit": "info",
+    "widow": "warn",
 }
 
 
@@ -103,17 +105,27 @@ def check(path: Path, margin: float, min_font: float, extra_patterns: list[str])
             # はみ出し
             if box:
                 x, y, w, h = box
+                if round(getattr(shp, "rotation", 0) or 0) % 180 == 90:
+                    # 90°/270° 回転は中心を軸に縦横が入れ替わる
+                    cx, cy = x + w / 2, y + h / 2
+                    x, y, w, h = int(cx - h / 2), int(cy - w / 2), h, w
                 tol = int(min(sw, sh) * 0.005)
                 if x < -tol or y < -tol or x + w > sw + tol or y + h > sh + tol:
                     out.append(finding("out_of_bounds", s_no, name, "スライドの外にはみ出している"))
-            # 文字量
-            est = estimate_text_height(shp, slide) if getattr(shp, "has_text_frame", False) and shp.text_frame.text.strip() else None
+            # 文字量（実フォントで折り返しを計算。フォントが無い環境では概算）
+            est = measure_shape(shp, slide) if getattr(shp, "has_text_frame", False) else None
             if est:
-                if est["ratio"] > 1.0:
-                    note = "（自動縮小が掛かる設定。縮小後の文字が小さすぎないか画像で確認）" if est["autofit"] == "shrink" else ""
-                    out.append(finding("overflow_risk", s_no, name, f"文字量が枠の約 {est['ratio']:.0%}。削るか枠・レイアウトを変える{note}"))
-                elif est["ratio"] > 1.0 - margin:
-                    out.append(finding("tight_fit", s_no, name, f"文字量が枠の約 {est['ratio']:.0%}。フォント差で溢れる余地がある"))
+                how = "" if est["exact"] else "（概算）"
+                # 1 行だけの枠は上下に均等にはみ出すだけで見た目は崩れないので、大きく超えたときだけ扱う
+                limit = 1.25 if est["line_count"] == 1 else 1.0
+                if est["ratio"] > limit:
+                    out.append(finding("overflow_risk", s_no, name, f"文字量が枠の約 {est['ratio']:.0%}{how}（{est['line_count']} 行）。削るか枠・レイアウトを変える"))
+                elif shp.is_placeholder and est["line_count"] > 1 and est["ratio"] > 1.0 - margin:
+                    out.append(finding("tight_fit", s_no, name, f"文字量が枠の約 {est['ratio']:.0%}{how}。フォント差で溢れる余地がある"))
+                if not est["wrap"] and est["widest_ratio"] > 1.0:
+                    out.append(finding("overflow_risk", s_no, name, f"折り返さない設定で横に {est['widest_ratio']:.0%} はみ出す"))
+                for w in est["widows"]:
+                    out.append(finding("widow", s_no, name, f"最終行が「{w}」だけになる。言い回しを変えるか、区切りのよい位置で改行（\\n）する"))
             # 文字サイズ・フォント・色
             if getattr(shp, "has_text_frame", False):
                 for para in shp.text_frame.paragraphs:

@@ -1,0 +1,16 @@
+{
+  "name": "Graphite Mincho",
+  "$note": "経営層向けの落ち着いた提言資料の例。見出しを明朝にして文字そのものを見せ場にする",
+  "colors": {
+    "dk1": "222222", "lt1": "FFFFFF", "dk2": "2E3A36", "lt2": "EEF0EC",
+    "accent1": "2E7D5B", "accent2": "C2703D", "accent3": "5A6F8F",
+    "accent4": "9A8A3C", "accent5": "A65A7A", "accent6": "8C4A4A",
+    "hlink": "2E7D5B", "folHlink": "5A6F8F"
+  },
+  "fonts": {
+    "heading": {"latin": "BIZ UDPMincho", "ea": "BIZ UDPMincho"},
+    "body": {"latin": "BIZ UDPGothic", "ea": "BIZ UDPGothic"}
+  },
+  "title_size": 28, "body_size": 18, "title_color": "dk1",
+  "cover": "minimal", "section": "minimal", "title_rule": true, "size": "16:9"
+}

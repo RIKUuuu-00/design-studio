@@ -32,9 +32,22 @@ Claude Code 2.1.275 以降なら 1 行でも入る: `/plugin install ai-design-k
 python3 ai-design-kit/scripts/doctor.py --template <project>/design-system/slides/template.pptx --image-test /tmp/img.png
 ```
 
+## 完成度を上げる仕組み（v0.2）
+
+| 仕組み | 内容 |
+| --- | --- |
+| パターン | `kpi` `cards` `steps` `timeline` `compare` `matrix` `chart_takeaway` `statement` `agenda`。余白・文字サイズ・色・行間を固定した定番構図で、Claude は中身だけを決める |
+| 実フォントでの文字組 | フォントの字幅と日本語の禁則で折り返しを計算（LibreOffice の描画と行分けが一致）。本文は最大 15% まで自動縮小、タイトルは縮めず報告。1〜2 文字だけの最終行（「る」だけの行）を検出 |
+| 表・グラフの仕上げ | 罫線だけの読みやすい表（強調行）、主張と同じ要素だけ色を付けるグラフ（他は灰色）、値軸の二重表示を消す |
+| デザインモード | 社内テンプレが無いとき、デザイン方針（theme.json）からテーマ・マスター・レイアウト付きのテンプレを生成。配色はコントラストと色差（ΔE）を検査 |
+| frontend-design | 方針立て（計画 → 見直し → 作る → 自己批評）と「生成っぽさ」の回避を、資料向けに読み替えて deck-lab に組み込み（`design-guide.md`）。UI の design-lab でもそのまま使う |
+| 採点ゲート | design-reviewer の採点モードで 7 項目を 1〜5 点評価。**要修正 0 件・全項目 4 点以上** になるまで最大 3 周回す |
+
+全パターンを使った 12 枚の見本は `tests/fixtures/showcase-deck.json`（E2E で指摘 0 件を確認している）。
+
 ## 使い方（パワポ）
 
-1. 利用側プロジェクトに `design-system/slides/template.pptx`（社内テンプレ）を置く
+1. 利用側プロジェクトに `design-system/slides/template.pptx`（社内テンプレ）を置く。無ければ置かずに進めると、デザインモードでテンプレから作る
 2. `/ai-design-kit:deck-lab register` … レイアウトカタログ（`layouts.md`）とサムネを作り、テンプレの構造上の問題を一覧で返す
 3. `/ai-design-kit:deck-lab` に素材（議事録・メモ・数値）とブリーフ（目的・読み手・枚数）を渡す
 4. 返ってきた比較キャンバスで骨子案を選び、コメントを書いて **Copy as prompt** → Claude Code に貼る
@@ -64,14 +77,19 @@ ai-design-kit/
 ├── scripts/
 │   ├── doctor.py                    # Phase 0 環境チェック
 │   ├── register_template.py         # テンプレ → layouts.md / layouts.json / thumbs/
-│   ├── build_deck.py                # deck.json → .pptx（テンプレのレイアウトに流し込み）
+│   ├── make_theme.py                # theme.json → テンプレ（デザインモード）
+│   ├── build_deck.py                # deck.json → .pptx（レイアウトに流し込み＋パターンで組版）
+│   ├── lib/textfit.py               # 実フォントの字幅・禁則での文字組計算
+│   ├── lib/patterns.py              # 定番構図（パターン）
+│   ├── lib/draw.py                  # 表・グラフ・図形の共通部品
 │   ├── check_deck.py                # 空き枠・仮文字・文字量超過・はみ出し・重なり・テーマ逸脱
 │   ├── render_pptx.py / render-pptx.sh   # pptx|pdf → PNG（+ サムネ一覧）
 │   ├── build_canvas.py              # canvas.json → 比較キャンバス
 │   ├── serve.sh                     # キャンバスのローカル配信
 │   ├── export.mjs                   # アートボード → PNG/PDF（横はみ出し・JS エラーも報告）
 │   └── token-lint.mjs               # トークン外の色・余白・フォント・未定義トークン
-└── starter/                         # design-system の初期値、CLAUDE.md の追記例
+├── references/frontend-design/      # frontend-design（Apache-2.0、無改変で同梱。NOTICE.md 参照）
+└── starter/                         # design-system の初期値、テーマの例、CLAUDE.md の追記例
 tests/run_e2e.sh                     # 全スクリプトを使い捨てプロジェクトで通す
 ```
 
@@ -85,10 +103,17 @@ tests/run_e2e.sh                     # 全スクリプトを使い捨てプロ�
 | 視覚検証のスクショ | Playwright MCP | 一括撮影は `export.mjs`、操作確認は MCP | 案×幅の一括撮影は MCP を 1 枚ずつ呼ぶより速く、トークンも少ない |
 | 環境確認 | 手作業の確認リスト | `doctor.py` | Phase 0 の項目（LibreOffice・フォント・画像入力）を 1 コマンドで確認できる |
 
-## 既知の制約（v0.1）
+## frontend-design の扱い
+
+- 公式の frontend-design プラグインを **依存関係（dependencies）にはしていない**。ゲートウェイ環境で公式マーケットプレイスに届かないと、依存先が入らずこのプラグイン自体が読み込めなくなるため
+- 代わりに Apache-2.0 の本体を無改変で `references/frontend-design/` に同梱し、deck-lab / design-lab が明示的に読む。公式プラグインが有効な環境ではそちらを優先する
+- frontend-design は Web UI 向けの指針なので、資料には `skills/deck-lab/design-guide.md` で読み替えて適用している
+
+## 既知の制約
 
 - テンプレ内の **サンプルスライドの複製** は未対応。流し込めるのはレイアウトのプレースホルダーだけ。図解の見本スライドを多用するテンプレでは効果が落ちる
-- 文字量の判定は概算（全角 = 1em）。最終判断は画像化 + レビュー
+- 文字量の判定は検証環境のフォントで行う。テーマのフォントが無い環境では代替フォントで測るため、PowerPoint の実物とずれうる（doctor.py で確認）
+- デザインモードのフォントは利用者の PC にも入っている必要がある（BIZ UDP ゴシック等、Windows 標準のものを推奨）
 - LibreOffice の描画は PowerPoint と完全には一致しない（特にグラフ・自動縮小）。最終確認は PowerPoint で行う
 - キャンバスは同一オリジン（`serve.sh` 経由）で開いたときだけ、画面内のテキスト編集を取得できる
 - 社内テンプレでの検証はまだしていない（テストは python-pptx 既定テンプレの擬似テンプレで実施）

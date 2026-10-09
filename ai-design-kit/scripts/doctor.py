@@ -70,8 +70,9 @@ def check_fonts(template: str | None) -> None:
     if fams is None:
         add(WARN, "フォント", "fc-list が無く確認できない（Windows では設定 > フォント で目視確認）")
         return
-    jp = [f for f in fams if any(k in f for k in ("gothic", "ゴシック", "mincho", "明朝", "noto sans cjk", "noto sans jp", "meiryo", "メイリオ", "yu ", "游", "hiragino", "ヒラギノ", "biz ud"))]
-    add(OK if jp else NG, "日本語フォント", f"{len(jp)} 種類" if jp else "見つからない。テンプレと同じフォントを導入する")
+    jp = [f for f in fams if any(k in f for k in ("gothic", "ゴシック", "mincho", "明朝", "noto sans cjk", "noto sans jp", "meiryo", "メイリオ", "yu ", "游", "hiragino", "ヒラギノ", "biz ud", "cjk jp", "noto serif jp"))]
+    names = sorted({f for f in jp if not f.startswith(".")}, key=str.lower)
+    add(OK if jp else NG, "日本語フォント", (f"{len(names)} 種類: " + ", ".join(names[:12]) + (" ほか" if len(names) > 12 else "")) if jp else "見つからない。テンプレと同じフォントを導入する")
     if template:
         prs = open_presentation(template)
         theme = theme_info(prs)

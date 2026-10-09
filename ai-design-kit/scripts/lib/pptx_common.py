@@ -6,13 +6,11 @@ python-pptx だけで完結させ、外部 Skill のコードには依存しな�
 from __future__ import annotations
 
 import copy
-import math
 import os
 import re
 import shutil
 import subprocess
 import tempfile
-import unicodedata
 import zipfile
 from pathlib import Path
 
@@ -259,101 +257,6 @@ def layout_placeholder_font_size(layout, ph, level: int = 1) -> float | None:
         if node is not None and node.get("sz"):
             return int(node.get("sz")) / 100
     return None
-
-
-def inherited_font_size(shape, slide=None, level: int = 1) -> float:
-    """スライド上の図形の文字サイズ（pt）を、プレースホルダーの継承を辿って推定する。"""
-    size = _sz_from(shape._element, level)
-    if size:
-        return size
-    if getattr(shape, "is_placeholder", False) and slide is not None:
-        try:
-            idx = shape.placeholder_format.idx
-            layout = slide.slide_layout
-            for lph in layout.placeholders:
-                if lph.placeholder_format.idx == idx:
-                    size = layout_placeholder_font_size(layout, lph, level)
-                    if size:
-                        return size
-        except Exception:  # noqa: BLE001
-            pass
-    return 18.0
-
-
-def text_em_width(text: str) -> float:
-    """全角=1em、半角=0.55em として幅を概算する。"""
-    width = 0.0
-    for ch in text:
-        if unicodedata.east_asian_width(ch) in ("F", "W", "A"):
-            width += 1.0
-        elif ch == "\t":
-            width += 2.0
-        else:
-            width += 0.55
-    return width
-
-
-def frame_insets(shape) -> tuple[int, int, int, int]:
-    body_pr = shape._element.find(".//a:bodyPr", NS)
-    def val(name, default):
-        if body_pr is not None and body_pr.get(name) is not None:
-            return int(body_pr.get(name))
-        return default
-    return (
-        val("lIns", DEFAULT_INSET_LR),
-        val("tIns", DEFAULT_INSET_TB),
-        val("rIns", DEFAULT_INSET_LR),
-        val("bIns", DEFAULT_INSET_TB),
-    )
-
-
-def estimate_text_height(shape, slide=None, line_spacing: float = 1.2) -> dict | None:
-    """テキスト枠の必要高さを概算し、枠に対する比率を返す。"""
-    if not getattr(shape, "has_text_frame", False) or shape.width is None or shape.height is None:
-        return None
-    l_ins, t_ins, r_ins, b_ins = frame_insets(shape)
-    inner_w = max(int(shape.width) - l_ins - r_ins, 1)
-    inner_h = max(int(shape.height) - t_ins - b_ins, 1)
-    total = 0.0
-    max_size = 0.0
-    for para in shape.text_frame.paragraphs:
-        text = "".join(r.text for r in para.runs) or ""
-        level = min(para.level + 1, 9)
-        size = None
-        for r in para.runs:
-            if r.font.size is not None:
-                size = r.font.size.pt
-                break
-        if size is None:
-            size = inherited_font_size(shape, slide, level)
-        max_size = max(max_size, size)
-        indent_em = 1.5 * para.level + (1.2 if para.level or _is_bulleted(shape, para) else 0)
-        size_emu = size * EMU_PER_PT
-        per_line = max(inner_w / size_emu - indent_em, 1)
-        lines = max(1, math.ceil(text_em_width(text) / per_line)) if text else 1
-        total += lines * size_emu * line_spacing
-    return {
-        "ratio": round(total / inner_h, 2),
-        "needed_emu": int(total),
-        "inner_h": inner_h,
-        "max_size_pt": max_size,
-        "autofit": _autofit_kind(shape),
-    }
-
-
-def _is_bulleted(shape, para) -> bool:
-    return getattr(shape, "is_placeholder", False) and placeholder_role(shape) == "body"
-
-
-def _autofit_kind(shape) -> str:
-    body_pr = shape._element.find(".//a:bodyPr", NS)
-    if body_pr is None:
-        return "none"
-    if body_pr.find("a:normAutofit", NS) is not None:
-        return "shrink"
-    if body_pr.find("a:spAutoFit", NS) is not None:
-        return "resize"
-    return "none"
 
 
 def chars_capacity(width: int, height: int, size_pt: float, line_spacing: float = 1.2) -> tuple[int, int]:

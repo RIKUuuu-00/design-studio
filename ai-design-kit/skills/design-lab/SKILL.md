@@ -26,12 +26,19 @@ Playwright MCP（`playwright`）も使える。ホバー・クリック後の状
 
 **ブリーフの指示 ＞ design-system/ ＞ 既存コードの見た目 ＞ 自分の判断**。自分の好みでスタイルを決めない。
 
+## デザインの考え方
+
+**frontend-design** に従う。公式の frontend-design プラグインが有効ならその Skill を、無ければ同梱の
+`${CLAUDE_PLUGIN_ROOT}/references/frontend-design/frontend-design.md` を手順 1 の前に読む。
+特に「主題から考える」「計画 → 計画の見直し → 作る → 自己批評」「生成っぽさの一覧」「見せ場は 1 か所」を守る。
+デザインシステムがある場合、frontend-design の自由度は **トークンの範囲内**（構図・情報の見せ方・文字の扱い）で使う。
+
 ## 手順
 
 ### 1. 基準を読む
 
 - `design-system/tokens.css` と `components.md` を読む
-- 無ければ `${CLAUDE_PLUGIN_ROOT}/starter/design-system/` を `design-system/` に複製して初版にし、「初期値で作った。ブランドに合わせて差し替えが必要」と返答に明記する
+- 無ければ frontend-design の「計画」（色 4〜6 色・書体・構図・原則）をブリーフの主題から立て、`${CLAUDE_PLUGIN_ROOT}/starter/design-system/` を `design-system/` に複製したうえで tokens.css / tokens.json の値を計画に合わせて書き換える。「仮のデザインシステムを作った。ブランドに合わせて差し替えが必要」と返答に明記する
 
 ### 2. 制約を集める
 
@@ -49,6 +56,9 @@ Playwright MCP（`playwright`）も使える。ホバー・クリック後の状
 | 操作導線 | 一覧から詳細へ遷移 ↔ その場で展開・編集 ↔ ウィザード |
 
 各案に **狙い** と **代償** を 1 行ずつ付ける。
+
+案ごとに frontend-design の「計画」を短く書き（構図の ASCII ワイヤーフレーム、揃え、見せ場）、
+「同じような依頼なら毎回これになるか？」で見直してから作る。見直しで変えた点は meta.json の `notes` に残す。
 
 ### 4. アートボードを作る
 
@@ -71,7 +81,8 @@ Playwright MCP（`playwright`）も使える。ホバー・クリック後の状
 
 1. `export.mjs` で各案を 375px と 1280px で撮る。出力の `[横はみ出し]` `[コンソールエラー]` は先に直す
 2. `token-lint.mjs` を実行し、逸脱を直す
-3. **design-reviewer サブエージェント** に `shots/*.png`、`checklists/review.md`、`design-system/tokens.css`、`components.md` のパスだけを渡す
+3. **design-reviewer サブエージェント** に `shots/*.png`、`checklists/review.md`、`design-system/tokens.css`、`components.md` のパスだけを渡す（検出モード）。
+   続けて frontend-design の「生成っぽさの一覧」と照らした自己批評を行い、当てはまる箇所は直す（装飾を 1 つ外しても伝わるなら外す）
 4. 指摘を直して撮り直す。2 周回して残った指摘は canvas.json の各案の `notes` に書き、キャンバスを再生成する（合否で止めない）
 
 ### 7. 返す
