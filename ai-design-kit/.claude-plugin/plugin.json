@@ -1,0 +1,9 @@
+{
+  "name": "ai-design-kit",
+  "displayName": "AI Design Kit",
+  "version": "0.2.0",
+  "description": "社内テンプレ準拠のパワポ（deck-lab）とUI画面（design-lab）を、複数案の比較→選択→仕上げのループで作る。ゲートウェイ認証の Claude Code でも動く（Artifacts 不要）",
+  "author": { "name": "Riku Maeda" },
+  "repository": "https://github.com/RIKUuuu-00/design-studio",
+  "keywords": ["pptx", "slides", "design", "design-system", "mockup", "gateway"]
+}

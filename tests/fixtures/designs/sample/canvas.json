@@ -1,0 +1,12 @@
+{
+  "track": "ui",
+  "slug": "sample",
+  "title": "営業ダッシュボード",
+  "brief": "営業マネージャーが朝に状況を把握する画面",
+  "assumptions": ["指標は3つに絞る", "PCでの閲覧が中心"],
+  "widths": [375, 1280],
+  "options": [
+    { "id": "A", "title": "一覧重視", "aim": "主要指標を一目で並べる", "tradeoff": "指標の背景説明は別画面", "src": "a.html", "height": 600 },
+    { "id": "B", "title": "要約重視", "aim": "要約文で状況を伝える", "tradeoff": "数値の比較はしにくい", "src": "b.html", "height": 600, "notes": ["375px でカードの余白が詰まり気味"] }
+  ]
+}

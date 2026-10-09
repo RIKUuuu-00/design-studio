@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>比較キャンバス</title>
+<style>
+  :root {
+    --bg: #f6f6f4; --surface: #ffffff; --surface-2: #f0f0ed; --text: #1d1d1b; --muted: #6b6b66;
+    --line: #dcdcd6; --accent: #2457d6; --accent-weak: #e6edfc; --warn: #a15c00; --warn-weak: #fff3df;
+    --ok: #1d7a46; --radius: 10px; --shadow: 0 1px 2px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.05);
+    --font: "Hiragino Sans", "Noto Sans JP", "Yu Gothic UI", "Meiryo", system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #161615; --surface: #1f1f1d; --surface-2: #2a2a27; --text: #ececea; --muted: #a2a29c;
+      --line: #3a3a36; --accent: #7aa2ff; --accent-weak: #1f2a46; --warn: #f0b05a; --warn-weak: #3a2a12; --ok: #5ccf8e;
+      --shadow: none;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #161615; --surface: #1f1f1d; --surface-2: #2a2a27; --text: #ececea; --muted: #a2a29c;
+    --line: #3a3a36; --accent: #7aa2ff; --accent-weak: #1f2a46; --warn: #f0b05a; --warn-weak: #3a2a12; --ok: #5ccf8e;
+    --shadow: none;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.6 var(--font); }
+  header.top { padding: 20px 24px 12px; border-bottom: 1px solid var(--line); background: var(--surface); }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .badge { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 99px; background: var(--accent-weak); color: var(--accent); margin-right: 6px; vertical-align: middle; }
+  .brief { color: var(--muted); margin: 6px 0 0; white-space: pre-wrap; }
+  details.assume { margin-top: 8px; }
+  details.assume summary { cursor: pointer; color: var(--muted); }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; padding: 10px 24px; position: sticky; top: 0; z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); }
+  .toolbar label { color: var(--muted); font-size: 13px; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .seg button { border: 0; background: var(--surface); color: var(--text); padding: 4px 10px; font: inherit; cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+  .board { display: flex; gap: 20px; padding: 20px 24px 220px; overflow-x: auto; align-items: flex-start; }
+  .card { flex: 0 0 auto; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); display: flex; flex-direction: column; max-width: calc(100vw - 32px); }
+  .card.selected { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .card-head { padding: 12px 14px 8px; border-bottom: 1px solid var(--line); }
+  .card-head h2 { font-size: 16px; margin: 0; display: flex; gap: 8px; align-items: baseline; }
+  .card-head .id { font-weight: 700; color: var(--accent); }
+  .meta { margin: 6px 0 0; font-size: 13px; }
+  .meta dt { color: var(--muted); float: left; clear: left; width: 3.5em; }
+  .meta dd { margin: 0 0 2px 3.5em; }
+  .notes { margin: 8px 0 0; padding: 6px 10px; background: var(--warn-weak); color: var(--warn); border-radius: 6px; font-size: 12px; }
+  .notes ul { margin: 0; padding-left: 1.2em; }
+  .frame-area { display: flex; justify-content: center; background: var(--surface-2); border-bottom: 1px solid var(--line); min-width: 240px; }
+  .frame-wrap { overflow: hidden; }
+  .frame-wrap iframe { border: 0; transform-origin: 0 0; background: #fff; display: block; }
+  .outline { list-style: none; margin: 0; padding: 8px 14px; width: 440px; max-width: 100%; }
+  .outline li { padding: 8px 0; border-bottom: 1px dashed var(--line); }
+  .outline li:last-child { border-bottom: 0; }
+  .outline .no { color: var(--muted); font-variant-numeric: tabular-nums; margin-right: 6px; }
+  .outline .stitle { font-weight: 700; }
+  .outline .layout { float: right; font-size: 11px; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; margin-left: 6px; }
+  .outline ul.points { margin: 4px 0 0; padding-left: 1.3em; color: var(--muted); font-size: 13px; }
+  .images { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; padding: 8px 14px; width: 440px; max-width: 100%; }
+  .images img { width: 100%; border: 1px solid var(--line); border-radius: 4px; cursor: zoom-in; }
+  [contenteditable="true"] { outline: 1px dashed var(--accent); outline-offset: 2px; border-radius: 2px; }
+  .card-foot { padding: 10px 14px 14px; display: grid; gap: 8px; }
+  .card-foot textarea { width: 100%; min-height: 56px; resize: vertical; }
+  textarea { font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
+  .pick { display: flex; align-items: center; gap: 6px; cursor: pointer; font-weight: 600; }
+  .dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; background: var(--surface); border-top: 1px solid var(--line); padding: 10px 24px 14px; display: grid; grid-template-columns: 1fr auto; gap: 8px 16px; align-items: start; }
+  .dock textarea { width: 100%; min-height: 44px; resize: vertical; }
+  .dock .actions { display: flex; flex-direction: column; gap: 6px; }
+  .btn { border: 1px solid var(--accent); background: var(--accent); color: #fff; border-radius: 8px; padding: 8px 14px; font: inherit; font-weight: 600; cursor: pointer; }
+  .btn.ghost { background: transparent; color: var(--accent); }
+  .status { font-size: 12px; color: var(--ok); min-height: 1em; }
+  #prompt-out { grid-column: 1 / -1; display: none; min-height: 120px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; }
+  #prompt-out.show { display: block; }
+  .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,.75); display: none; align-items: center; justify-content: center; z-index: 10; }
+  .lightbox.show { display: flex; }
+  .lightbox img { max-width: 94vw; max-height: 92vh; background: #fff; }
+  @media (max-width: 640px) {
+    header.top, .toolbar, .board, .dock { padding-left: 16px; padding-right: 16px; }
+    .board { flex-direction: column; overflow-x: visible; }
+    .card { width: 100%; }
+    .outline, .images { width: 100%; }
+    .dock { grid-template-columns: 1fr; }
+    .dock .actions { flex-direction: row; flex-wrap: wrap; }
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <h1><span class="badge" id="track"></span><span id="title"></span></h1>
+  <p class="brief" id="brief"></p>
+  <details class="assume" id="assume-box" hidden><summary>仮定（不足情報を推測で補った点）</summary><ul id="assumptions"></ul></details>
+</header>
+<div class="toolbar" id="toolbar">
+  <span id="ui-tools" hidden>
+    <label>画面幅</label>
+    <span class="seg" id="widths"></span>
+    <label style="margin-left:12px">表示倍率</label>
+    <span class="seg" id="zooms"></span>
+  </span>
+  <label class="pick" style="font-weight:400"><input type="checkbox" id="edit-toggle"> テキストを直接編集</label>
+  <span class="seg"><button type="button" id="theme-btn" aria-pressed="false">配色切替</button></span>
+</div>
+<main class="board" id="board"></main>
+<section class="dock" aria-label="Claude への指示">
+  <textarea id="global-comment" placeholder="全体へのコメント（例：Bの構成で、Aの3枚目の比較表も入れたい）"></textarea>
+  <div class="actions">
+    <button class="btn" type="button" id="copy-btn">Copy as prompt</button>
+    <button class="btn ghost" type="button" id="show-btn">プロンプトを表示</button>
+    <span class="status" id="status" role="status"></span>
+  </div>
+  <textarea id="prompt-out" readonly aria-label="生成したプロンプト"></textarea>
+</section>
+<div class="lightbox" id="lightbox"><img alt=""></div>
+
+<script id="canvas-data" type="application/json">/*__CANVAS_DATA__*/</script>
+<script>
+(() => {
+  const data = JSON.parse(document.getElementById("canvas-data").textContent);
+  const isUI = data.track === "ui";
+  const storeKey = `canvas:${data.track}:${data.slug}`;
+  // 画面幅に応じた初期倍率（狭い幅は大きめに見せる）
+  const autoZoom = (w) => (w <= 480 ? 0.75 : w <= 900 ? 0.5 : 0.4);
+  const firstWidth = (data.widths || [1280])[0];
+  const state = { selected: null, width: firstWidth, zoom: isUI ? autoZoom(firstWidth) : 1, edit: false, comments: {}, global: "" };
+  const original = new Map();   // key -> 元テキスト（deck の骨子）
+  const frameTexts = new Map(); // option id -> [{el, path, text}]
+
+  const load = () => { try { Object.assign(state, JSON.parse(localStorage.getItem(storeKey) || "{}")); } catch (e) {} };
+  const save = () => { try { localStorage.setItem(storeKey, JSON.stringify({ selected: state.selected, comments: state.comments, global: state.global, width: state.width, zoom: state.zoom })); } catch (e) {} };
+  load();
+
+  const $ = (sel) => document.querySelector(sel);
+  const el = (tag, attrs = {}, ...kids) => {
+    const n = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      if (k === "class") n.className = v; else if (k === "text") n.textContent = v; else n.setAttribute(k, v);
+    }
+    for (const k of kids) if (k) n.append(k);
+    return n;
+  };
+
+  $("#track").textContent = isUI ? "UI" : "資料";
+  $("#title").textContent = data.title || data.slug;
+  document.title = `${data.title || data.slug} – 比較キャンバス`;
+  $("#brief").textContent = data.brief || "";
+  if ((data.assumptions || []).length) {
+    $("#assume-box").hidden = false;
+    for (const a of data.assumptions) $("#assumptions").append(el("li", { text: a }));
+  }
+
+  // ---- ツールバー
+  if (isUI) {
+    $("#ui-tools").hidden = false;
+    for (const w of data.widths || [375, 1280]) {
+      const b = el("button", { type: "button", text: `${w}px`, "aria-pressed": String(w === state.width) });
+      b.onclick = () => { state.width = w; state.zoom = autoZoom(w); save(); render(); };
+      $("#widths").append(b);
+    }
+    for (const z of [0.25, 0.4, 0.5, 0.75, 1]) {
+      const b = el("button", { type: "button", text: `${Math.round(z * 100)}%`, "aria-pressed": String(z === state.zoom) });
+      b.onclick = () => { state.zoom = z; save(); render(); };
+      $("#zooms").append(b);
+    }
+  }
+  $("#edit-toggle").onchange = (e) => { state.edit = e.target.checked; applyEdit(); };
+  $("#theme-btn").onclick = () => {
+    const root = document.documentElement;
+    const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+    root.dataset.theme = dark ? "light" : "dark";
+  };
+
+  // ---- カード
+  function render() {
+    for (const b of document.querySelectorAll("#widths button")) b.setAttribute("aria-pressed", String(b.textContent === `${state.width}px`));
+    for (const b of document.querySelectorAll("#zooms button")) b.setAttribute("aria-pressed", String(b.textContent === `${Math.round(state.zoom * 100)}%`));
+    const board = $("#board");
+    board.textContent = "";
+    for (const opt of data.options) board.append(card(opt));
+    applyEdit();
+  }
+
+  function card(opt) {
+    const c = el("article", { class: "card" + (state.selected === opt.id ? " selected" : ""), "data-id": opt.id });
+    const head = el("div", { class: "card-head" },
+      el("h2", {}, el("span", { class: "id", text: `案${opt.id}` }), el("span", { text: opt.title || "" })));
+    const dl = el("dl", { class: "meta" });
+    if (opt.aim) dl.append(el("dt", { text: "狙い" }), el("dd", { text: opt.aim }));
+    if (opt.tradeoff) dl.append(el("dt", { text: "代償" }), el("dd", { text: opt.tradeoff }));
+    head.append(dl);
+    if ((opt.notes || []).length) {
+      const ul = el("ul");
+      for (const n of opt.notes) ul.append(el("li", { text: n }));
+      head.append(el("div", { class: "notes" }, el("strong", { text: "自己検証で残った指摘" }), ul));
+    }
+    c.append(head);
+
+    if (opt.src) {
+      const h = opt.height || 900;
+      const wrap = el("div", { class: "frame-wrap" });
+      wrap.style.width = `${state.width * state.zoom}px`;
+      wrap.style.height = `${h * state.zoom}px`;
+      const f = el("iframe", { src: opt.src, title: `案${opt.id}`, loading: "lazy" });
+      f.style.width = `${state.width}px`;
+      f.style.height = `${h}px`;
+      f.style.transform = `scale(${state.zoom})`;
+      f.addEventListener("load", () => captureFrame(opt.id, f));
+      wrap.append(f);
+      c.append(el("div", { class: "frame-area" }, wrap));
+    }
+    if (opt.outline) {
+      const ol = el("ol", { class: "outline" });
+      opt.outline.forEach((s, i) => {
+        const no = s.no || i + 1;
+        const key = `${opt.id}:${no}:title`;
+        if (!original.has(key)) original.set(key, s.title || "");
+        const li = el("li", {},
+          s.layout ? el("span", { class: "layout", text: s.layout }) : null,
+          el("span", { class: "no", text: String(no).padStart(2, "0") }),
+          el("span", { class: "stitle editable", "data-key": key, text: s.edited ?? s.title ?? "" }));
+        if ((s.points || []).length) {
+          const ul = el("ul", { class: "points" });
+          s.points.forEach((p, j) => {
+            const pk = `${opt.id}:${no}:p${j + 1}`;
+            if (!original.has(pk)) original.set(pk, p);
+            ul.append(el("li", { class: "editable", "data-key": pk, text: p }));
+          });
+          li.append(ul);
+        }
+        ol.append(li);
+      });
+      c.append(ol);
+    }
+    if ((opt.images || []).length) {
+      const g = el("div", { class: "images" });
+      for (const src of opt.images) {
+        const img = el("img", { src, alt: `案${opt.id} ${src}`, loading: "lazy" });
+        img.onclick = () => { $("#lightbox img").src = src; $("#lightbox").classList.add("show"); };
+        g.append(img);
+      }
+      c.append(g);
+    }
+
+    const foot = el("div", { class: "card-foot" });
+    const radio = el("input", { type: "radio", name: "pick", value: opt.id });
+    radio.checked = state.selected === opt.id;
+    radio.onchange = () => { state.selected = opt.id; save(); for (const k of document.querySelectorAll(".card")) k.classList.toggle("selected", k.dataset.id === opt.id); };
+    const ta = el("textarea", { placeholder: `案${opt.id}へのコメント` });
+    ta.value = state.comments[opt.id] || "";
+    ta.oninput = () => { state.comments[opt.id] = ta.value; save(); };
+    foot.append(el("label", { class: "pick" }, radio, document.createTextNode("この案を採用")), ta);
+    c.append(foot);
+    return c;
+  }
+
+  // ---- テキスト編集（骨子は contenteditable、UI は iframe を designMode に）
+  function applyEdit() {
+    for (const n of document.querySelectorAll(".editable")) n.contentEditable = state.edit ? "true" : "false";
+    for (const f of document.querySelectorAll("iframe")) {
+      try { f.contentDocument.designMode = state.edit ? "on" : "off"; } catch (e) {}
+    }
+  }
+
+  function nodePath(node, root) {
+    const parts = [];
+    for (let n = node; n && n !== root; n = n.parentElement) {
+      let part = n.tagName.toLowerCase();
+      if (n.id) { parts.unshift(`${part}#${n.id}`); break; }
+      if (n.classList.length) part += "." + [...n.classList].slice(0, 2).join(".");
+      parts.unshift(part);
+    }
+    return parts.slice(-3).join(" > ");
+  }
+
+  function ownText(n) {
+    return [...n.childNodes].filter((c) => c.nodeType === 3).map((c) => c.textContent).join("").replace(/\s+/g, " ").trim();
+  }
+
+  function captureFrame(id, frame) {
+    try {
+      const doc = frame.contentDocument;
+      const list = [];
+      for (const n of doc.body.querySelectorAll("*")) {
+        if (["SCRIPT", "STYLE"].includes(n.tagName)) continue;
+        const t = ownText(n);
+        if (t) list.push({ el: n, path: nodePath(n, doc.body), text: t });
+      }
+      frameTexts.set(id, list);
+      if (state.edit) doc.designMode = "on";
+    } catch (e) {
+      frameTexts.set(id, null); // file:// などで別オリジン扱い
+    }
+  }
+
+  // ---- プロンプト生成
+  function buildPrompt() {
+    const skill = isUI ? "/design-lab" : "/deck-lab";
+    const label = isUI ? "案" : "骨子案";
+    const lines = [`${skill} ${data.slug} の比較キャンバスからの指示`];
+    const sel = data.options.find((o) => o.id === state.selected);
+    lines.push(sel ? `採用: ${label}${sel.id}「${sel.title || ""}」` : "採用: 未決定（コメントに沿って案を修正・追加する）");
+    if (state.global.trim()) lines.push("", "全体コメント:", state.global.trim());
+    const cm = data.options.filter((o) => (state.comments[o.id] || "").trim());
+    if (cm.length) {
+      lines.push("", "案ごとのコメント:");
+      for (const o of cm) lines.push(`- ${label}${o.id}: ${state.comments[o.id].trim().replace(/\n/g, " / ")}`);
+    }
+    const edits = [];
+    for (const n of document.querySelectorAll(".editable")) {
+      const key = n.dataset.key;
+      const before = original.get(key) ?? "";
+      const after = n.textContent.trim();
+      if (after !== before) {
+        const [id, no, field] = key.split(":");
+        const what = field === "title" ? "タイトル" : `要点${field.slice(1)}`;
+        edits.push(`- ${label}${id} スライド${no} ${what}: 「${before}」→「${after}」`);
+      }
+    }
+    for (const [id, list] of frameTexts) {
+      if (!list) continue;
+      for (const item of list) {
+        if (!item.el.isConnected) { edits.push(`- 案${id} ${item.path}: 「${item.text}」を削除`); continue; }
+        const now = ownText(item.el);
+        if (now !== item.text) edits.push(`- 案${id} ${item.path}: 「${item.text}」→「${now}」`);
+      }
+    }
+    if (edits.length) lines.push("", "テキスト修正（そのまま反映する）:", ...edits);
+    if ([...frameTexts.values()].some((v) => v === null) && state.edit) {
+      lines.push("", "（注: file:// で開いたため画面内の直接編集は取得できなかった。serve.sh 経由で開くこと）");
+    }
+    return lines.join("\n");
+  }
+
+  async function copyText(text) {
+    try { await navigator.clipboard.writeText(text); return true; } catch (e) {}
+    const out = $("#prompt-out");
+    out.value = text; out.classList.add("show"); out.select();
+    try { return document.execCommand("copy"); } catch (e) { return false; }
+  }
+
+  $("#global-comment").value = state.global || "";
+  $("#global-comment").oninput = (e) => { state.global = e.target.value; save(); };
+  $("#copy-btn").onclick = async () => {
+    const text = buildPrompt();
+    $("#prompt-out").value = text;
+    const ok = await copyText(text);
+    $("#status").textContent = ok ? "コピーした。Claude Code に貼り付けて送信する" : "コピーできなかった。下の欄から手動でコピーする";
+    if (!ok) $("#prompt-out").classList.add("show");
+  };
+  $("#show-btn").onclick = () => { const o = $("#prompt-out"); o.value = buildPrompt(); o.classList.toggle("show"); };
+  $("#lightbox").onclick = () => $("#lightbox").classList.remove("show");
+
+  render();
+})();
+</script>
+</body>
+</html>

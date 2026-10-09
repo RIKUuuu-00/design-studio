@@ -1,0 +1,16 @@
+{
+  "name": "Navy Standard",
+  "$note": "保守的な社内報告向けの例。主題に合わせて色・書体・構図を変えて使う（そのまま使い回さない）",
+  "colors": {
+    "dk1": "1E2329", "lt1": "FFFFFF", "dk2": "123A5A", "lt2": "E9EEF2",
+    "accent1": "1D63B8", "accent2": "D9822B", "accent3": "4E8F6A",
+    "accent4": "7A64A8", "accent5": "2F9AA6", "accent6": "B4544A",
+    "hlink": "1D63B8", "folHlink": "6B4E99"
+  },
+  "fonts": {
+    "heading": {"latin": "BIZ UDPGothic", "ea": "BIZ UDPGothic"},
+    "body": {"latin": "BIZ UDPGothic", "ea": "BIZ UDPGothic"}
+  },
+  "title_size": 26, "body_size": 18, "title_color": "dk2",
+  "cover": "split", "section": "full", "title_rule": true, "size": "16:9"
+}
